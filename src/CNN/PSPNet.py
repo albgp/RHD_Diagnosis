@@ -2,7 +2,7 @@ from keras_segmentation.models.pspnet import vgg_pspnet as pspnet
 
 class PSPNet:
     def __init__(self, **kwargs):
-    """ Inits the PSPNet arguments """
+        """ Inits the PSPNet arguments """
         for key, value in kwargs.items():
             self.__dict__.update(kwargs)
 

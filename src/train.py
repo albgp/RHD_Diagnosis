@@ -9,6 +9,7 @@ from pathlib import Path
 import logging
 from PIL import Image
 from sklearn.model_selection import train_test_split
+from CNN.PSPNet import PSPNet
 
 #tf.config.list_physical_devices("GPU")
 
@@ -106,4 +107,10 @@ ds.load()
 logging.info("Finished loading dataset.")
 
 if (args["_train_unet"]):
-    pass
+    logging.info("Training U-Net")
+    logging.info("Finished training U-Net")
+
+if (args["_train_pspnet"]):
+    logging.info("Training PSP-Net")
+    PSPNet()
+    logging.info("Finished taining PSP-Net")
