@@ -1,0 +1,9 @@
+numpy
+cv2
+matplotlib
+tensorflow
+keras
+keras_segmentation
+PIL
+pathlib
+argparse
