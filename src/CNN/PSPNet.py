@@ -1,4 +1,4 @@
-from keras_segmentation.models.pspnet import vgg_pspnet
+from keras_segmentation.models.pspnet import vgg_pspnet as pspnet
 
 class PSPNet:
     def __init__(self, **kwargs):
@@ -7,7 +7,7 @@ class PSPNet:
             self.__dict__.update(kwargs)
 
     def create_model(self):
-        self.model = vgg_pspnet(n_classes=4,  input_height=384, input_width=384 )
+        self.model = pspnet(n_classes=4,  input_height=384, input_width=384 )
         self.model.summary()
 
     def save_model(self):
