@@ -9,3 +9,5 @@ pathlib
 argparse
 eisen
 skimage
+six
+tqdm

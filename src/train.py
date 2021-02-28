@@ -10,6 +10,7 @@ import logging
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from CNN.PSPNet import PSPNet
+from data_handler import data_loader
 
 #tf.config.list_physical_devices("GPU")
 
@@ -35,6 +36,34 @@ parser.add_argument("--preprocess", dest="_preprocess", default=None, choices=["
 args = vars(parser.parse_args())
 print(args)
 
+defaults_ds={
+          "input_height":None,
+          "input_width":None,
+          "n_classes":4,
+          "verify_dataset":True,
+          "batch_size":2,
+          "validate":False,
+          "val_images":None,
+          "val_annotations":None,
+          "val_batch_size":2,
+          "auto_resume_checkpoint":False,
+          "load_weights":None,
+          "steps_per_epoch":512,
+          "val_steps_per_epoch":12,
+          "gen_use_multiprocessing":False,
+          "ignore_zero_class":False,
+          "optimizer_name":'adam',
+          "do_augment":False,
+          "augmentation_name":"aug_all",
+          "callbacks":None,
+          "custom_augmentation":None,
+          "other_inputs_paths":None,
+          "preprocessing":None,
+          "read_image_type":1  # cv2.IMREAD_COLOR = 1 (rgb),
+                             # cv2.IMREAD_GRAYSCALE = 0,
+                             # cv2.IMREAD_UNCHANGED = -1 (4 channels like RGBA)
+}
+
 def parse_preprocess(preprocess):
     preprocess_fns={
         "CAMUS": lambda x:x,
@@ -43,7 +72,7 @@ def parse_preprocess(preprocess):
     return preprocess_fns.get(preprocess, None)
 
 class Dataset:
-    def __init__(self, data_dir, test_dir, val_frac, preprocess):
+    def __init__(self, data_dir, test_dir, val_frac, preprocess, defaults_ds):
         logging.info(f'Creating Dataset Object for {data_dir}')
         self.data_dir=data_dir 
         self.test_dir=test_dir 
@@ -53,64 +82,64 @@ class Dataset:
         else:
             self.preprocess=lambda x: x
         self.containsTest=(test_dir!="")
-
-    def load(self):
-        logging.info(f'Loading data in {self.data_dir}')
-        if not os.path.exists(self.data_dir):
-            logging.error("Data directory does not exists!")
-
+        self.defaults=defaults_ds
+    
+    def load(self, input_height, input_width, output_height, output_width):
         img_dir=self.data_dir+"/imgs"
-        if not os.path.exists(img_dir):
-            logging.error(f"\"imgs\" dir does not exist inside data directory {self.data_dir}")
-            sys.exit(1)
-
         mask_dir=self.data_dir+"/masks"
-        if not os.path.exists(mask_dir):
-            logging.error(f"\"masks\" dir does not exist inside data directory {self.data_dir}")
-            sys.exit(1)
-
-        imgs={}; masks={}
-
-        for entry in os.scandir(img_dir):
-            if entry.is_file():
-                with Image.open(entry.path) as tmpimg:
-                    logging.debug(f"Appending img {entry.name} to imgs")
-                    imgs[entry.name]=self.preprocess(np.array(tmpimg))
-
-        for entry in os.scandir(mask_dir):
-            if entry.is_file():
-                with Image.open(entry.path) as tmpimg:
-                    logging.debug(f"Appending img {entry.name} to masks")
-                    masks[entry.name]=self.preprocess(np.array(tmpimg))
-        
-        dataset={"imgs":[], "masks":[]}
-
-        for k, v in imgs.items():
-            if k not in masks:
-                logging.warning(f"Image {k} not found in masks folder. Skipping this file.")
-            else:
-                dataset["imgs"].append(v)
-                dataset["masks"].append(masks[k])
-        
-        self.size=len(imgs)
-
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(
-            dataset["imgs"], dataset["masks"], test_size=self.val_frac, random_state=42)
-
-ds=Dataset(
-           args["_data_dir"],
-           args["_test_dir"],
-           args["_val_frac"],
-           args["_preprocess"]
+        self._named_data=data_loader.get_pairs_from_paths(img_dir, mask_dir)
+        self._loaded_data=data_loader.image_segmentation_generator(
+            img_dir, 
+            mask_dir,  
+            self.defaults["batch_size"],  
+            self.defaults["n_classes"],
+            input_height, 
+            input_width,
+            output_height, 
+            output_width,
+            read_image_type=self.defaults["read_image_type"]
         )
-ds.load()
-logging.info("Finished loading dataset.")
+    
+    def verify(self):
+        pass
+
 
 if (args["_train_unet"]):
     logging.info("Training U-Net")
+    ds=Dataset(
+           args["_data_dir"],
+           args["_test_dir"],
+           args["_val_frac"],
+           args["_preprocess"],
+           defaults_ds
+        )
+    ds.load2()
+    logging.info("Finished loading dataset.")
     logging.info("Finished training U-Net")
 
 if (args["_train_pspnet"]):
     logging.info("Training PSP-Net")
-    PSPNet()
+    ds=Dataset(
+           args["_data_dir"],
+           args["_test_dir"],
+           args["_val_frac"],
+           args["_preprocess"],
+           defaults_ds
+        )
+    pspnet=PSPNet(
+        {   
+            "data": ds,
+            "callbacks": [],
+            "validate": True
+            
+        }
+    )
+    pspnet.create_model()
+    ds.load2(
+        pspnet.model.input_height,
+        pspnet.model.input_width,
+        pspnet.model.output_height,
+        pspnet.model.output_width
+    )
+    pspnet.train()
     logging.info("Finished taining PSP-Net")
