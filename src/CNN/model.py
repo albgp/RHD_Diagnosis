@@ -8,6 +8,9 @@ class SegModel:
     def save_model(self):
         self.model.save(self.save_dir+"/"+self.name)
 
+    def load(self, path):
+        pass
+
     def train(self):
         self.model.compile(
                     loss='categorical_crossentropy',
@@ -24,7 +27,6 @@ class SegModel:
             )
         else:
             pass
-
 
     def predict(X,y):
         pass
