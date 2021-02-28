@@ -85,7 +85,6 @@ if (args["_train_pspnet"]):
             
         }
     )
-    pspnet.create_model()
     ds.load(
         pspnet.model.input_height,
         pspnet.model.input_width,
