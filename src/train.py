@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from CNN.PSPNet import PSPNet
 from data_handler import data_loader
 from params import defaults_ds
+from utils.imgtools.RSofia_prepr import preprocess_RSofia
 #tf.config.list_physical_devices("GPU")
 from cli_train import *
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 def parse_preprocess(preprocess):
     preprocess_fns={
         "CAMUS": lambda x:x,
-        "RSofia": lambda x:x
+        "RSofia": preprocess_RSofia
     }
     return preprocess_fns.get(preprocess, None)
 
@@ -48,7 +49,8 @@ class Dataset:
             input_width,
             output_height, 
             output_width,
-            read_image_type=self.defaults["read_image_type"]
+            read_image_type=self.defaults["read_image_type"],
+            preprocessing=self.preprocess
         )
     
     def verify(self):
